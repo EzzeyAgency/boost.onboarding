@@ -4,6 +4,8 @@ import { isAdminEmail } from "@/lib/admin";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
+  // Vercel serves the app behind its own proxy on custom domains; trust the forwarded host.
+  trustHost: true,
   session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
   pages: { signIn: "/leads", error: "/leads" },
   callbacks: {

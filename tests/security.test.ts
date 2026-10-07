@@ -96,3 +96,11 @@ describe("helpers", () => {
     expect(rateLimited(key, 5, 1000, 2000)).toBe(false);
   });
 });
+
+describe("deployment settings check", async () => {
+  const { missingSettings } = await import("@/lib/config-check");
+  it("names missing settings without exposing values", () => {
+    expect(missingSettings({})).toEqual(["AUTH_SECRET", "AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET", "ADMIN_EMAILS", "DATABASE_URL"]);
+    expect(missingSettings({ AUTH_SECRET: "s", AUTH_GOOGLE_ID: "i", AUTH_GOOGLE_SECRET: "g", ADMIN_EMAILS: "a@b.com", DATABASE_URL: "postgres://x" })).toEqual([]);
+  });
+});

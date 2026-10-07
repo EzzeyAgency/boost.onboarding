@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const [admin, params] = await Promise.all([getAdmin(), searchParams]);
-  if (!admin.isAdmin) return <AccessPage signedIn={admin.signedIn} denied={params.error === "AccessDenied"} redirectTo="/leads" subject="submissions" />;
+  if (!admin.isAdmin) return <AccessPage signedIn={admin.signedIn} denied={params.error === "AccessDenied"} configError={params.error === "Configuration"} redirectTo="/leads" subject="submissions" />;
   return (
     <main className="app-shell">
       <BrandHeader signOut={<SignOutButton />} />
