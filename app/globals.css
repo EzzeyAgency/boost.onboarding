@@ -174,3 +174,6 @@ details summary { color:var(--blue-deep); cursor:pointer; font-weight:800; }
 .choice-card { position:relative; }
 .choice-card:focus-within { outline:2px solid var(--blue); outline-offset:2px; }
 @media (max-width:480px) { .brand-divider,.brand-product { display:none; } }
+fieldset.form-field { border:0; padding:0; min-width:0; }
+fieldset.form-field legend { padding:0; }
+@media (max-width:620px) { .brand-nav { font-size:.8rem; } .brand-nav a { padding:.7rem .15rem; } }
