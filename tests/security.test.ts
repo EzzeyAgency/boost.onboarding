@@ -163,3 +163,14 @@ describe("save progress and resume", () => {
     expect((await listDraftsRoute()).status).toBe(200);
   });
 });
+
+describe("webhook routing", async () => {
+  const { webhookUrlFor } = await import("@/lib/webhook-routing");
+  it("sends support to its own URL and onboarding elsewhere", () => {
+    const env = { HIGHLEVEL_SUPPORT_WEBHOOK_URL: "https://hl/support" };
+    expect(webhookUrlFor("support.submitted", env)).toBe("https://hl/support");
+    expect(webhookUrlFor("onboarding.submitted", env)).toBeNull();
+    expect(webhookUrlFor("onboarding.progress_saved", { ...env, HIGHLEVEL_ONBOARDING_WEBHOOK_URL: "https://hl/onb" })).toBe("https://hl/onb");
+    expect(webhookUrlFor("onboarding.submitted", { HIGHLEVEL_WEBHOOK_URL: "https://hl/all" })).toBe("https://hl/all");
+  });
+});

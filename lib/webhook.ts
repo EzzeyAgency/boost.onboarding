@@ -1,13 +1,11 @@
 import "server-only";
+import { webhookUrlFor, type WebhookEvent } from "@/lib/webhook-routing";
 
-export type WebhookEvent = "onboarding.submitted" | "onboarding.progress_saved" | "support.submitted";
+export type { WebhookEvent };
 
-/**
- * Sends an event to the HighLevel inbound webhook (or any automation URL) when HIGHLEVEL_WEBHOOK_URL is set.
- * One URL receives every event; the workflow branches on the "event" field. Never blocks or fails a submission.
- */
+/** Sends an event to its HighLevel inbound webhook, if one is configured. Never blocks or fails a submission. */
 export async function sendWebhook(event: WebhookEvent, payload: Record<string, unknown>) {
-  const url = process.env.HIGHLEVEL_WEBHOOK_URL;
+  const url = webhookUrlFor(event);
   if (!url) return false;
   try {
     const response = await fetch(url, {

@@ -52,7 +52,11 @@ Stack: Next.js (App Router), Drizzle ORM, Neon Postgres, Auth.js with Google sig
 
 ## HighLevel webhook (optional)
 
-Set `HIGHLEVEL_WEBHOOK_URL` to a HighLevel workflow "Inbound Webhook" trigger URL. Every event is a JSON POST with an `event` field:
+Set a HighLevel workflow "Inbound Webhook" trigger URL in Vercel. Every event is a JSON POST with an `event` field.
+
+- `HIGHLEVEL_SUPPORT_WEBHOOK_URL`: support requests only
+- `HIGHLEVEL_ONBOARDING_WEBHOOK_URL`: onboarding submissions and saved progress
+- `HIGHLEVEL_WEBHOOK_URL`: catch-all for any event without its own URL
 
 | Event | When | Useful fields |
 |---|---|---|
