@@ -3,7 +3,7 @@ import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { and, desc, eq, gte, isNull, like, lt, or, type SQL } from "drizzle-orm";
 import { clientPages, drafts, submissions, type NewSubmission } from "@/db/schema";
-import { clientSlug, slugify } from "@/lib/slug";
+import { clientSlug } from "@/lib/slug";
 
 let client: ReturnType<typeof drizzle> | undefined;
 
@@ -135,8 +135,8 @@ export async function getPageFor(ref: { draftId?: number | null; submissionId?: 
 }
 
 /**
- * Returns the customer's page, creating it on first call. The slug comes from the business name,
- * gets -2, -3... when taken, and never changes afterwards so links already shared stay valid.
+ * Returns the customer's page, creating it on first call. The slug is the business name plus city and state,
+ * gets -1, -2... when an exact repeat, and never changes afterwards so links already shared stay valid.
  */
 export async function ensureClientPage(input: { email: string; companyName: string; city?: string | null; state?: string | null; draftId?: number | null; submissionId?: number | null }) {
   const existing = await getPageFor(input);
@@ -146,7 +146,7 @@ export async function ensureClientPage(input: { email: string; companyName: stri
     }
     return { page: existing, created: false };
   }
-  const base = slugify(input.companyName);
+  const base = clientSlug(input.companyName, input.city, input.state, []);
   for (let attempt = 0; attempt < 5; attempt++) {
     const taken = await db().select({ slug: clientPages.slug }).from(clientPages).where(or(eq(clientPages.slug, base), like(clientPages.slug, `${base}-%`)));
     const slug = clientSlug(input.companyName, input.city, input.state, taken.map(row => row.slug));

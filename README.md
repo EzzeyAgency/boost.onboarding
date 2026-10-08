@@ -7,7 +7,7 @@ Ezzey's BOOST onboarding app, rebuilt from the Manus version for GitHub and Verc
 | `/` | Public | Two-part onboarding (Google first, then the business), with save and resume |
 | `/support` | Public | Support request form |
 | `/leads` | Admin only | All leads, all time, newest first; onboarding, support and in-progress tabs; date filters; CSV export |
-| `/<business-name>` | Anyone with the link | At-a-glance client page for sales and reporting calls (e.g. `/smith-and-sons-plumbing`) |
+| `/<business-name>` | Anyone with the link | At-a-glance client page for sales and reporting calls (e.g. `/smith-and-sons-plumbing-tempe-az`) |
 | `/leads/drafts/[id]` | Admin only | Answers saved so far by a customer who hasn't submitted |
 | `/leads/[id]` | Admin only | Call-ready business or support profile |
 
@@ -53,8 +53,8 @@ Stack: Next.js (App Router), Drizzle ORM, Neon Postgres, Auth.js with Google sig
 
 ## Client pages
 
-- Each customer gets one page at `/<business-name>`, created when they finish the "Your details" step, save for later, or submit.
-- A second business with the same name gets its city and state (`/smith-plumbing-tempe-az`), then `-2` if that is also taken. The address never changes once created. Reserved paths (`leads`, `support`, `api`...) get `-client`.
+- Each customer gets one page at `/<business-name>-<city>-<state>`, created (once name, city and state are known) when they finish the "Your details" step, save for later, or submit.
+- The address is the business name plus city and state (`/smith-plumbing-tempe-az`). Only an exact repeat of all three gets `-1`, then `-2`, and so on. The address never changes once created. Reserved paths (`leads`, `support`, `api`...) get `-client`.
 - The page shows the submitted answers, or the saved draft (marked "In progress") until they submit.
 - Open to anyone with the link (shared through HighLevel and Teamwork). Every page sends `noindex` and `robots.txt` disallows crawling, so pages stay out of search engines.
 - Database: run `drizzle/0002_client_pages.sql` once.

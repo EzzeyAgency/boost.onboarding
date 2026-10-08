@@ -18,24 +18,21 @@ export function slugify(name: string) {
 }
 
 /**
- * Slug for a new client page. The first business with a name gets the plain name; a second business
- * with the same name gets the name plus city and state ("smith-plumbing-tempe-az"). Numbers are only
- * a last resort, if city and state are missing or that combination is also taken.
+ * Slug for a new client page: business name plus city and state, e.g. "smith-plumbing-tempe-az".
+ * Only an exact repeat (same name, city and state) gets -1, -2, -3. Older records without a city fall back to the name.
  */
 export function clientSlug(companyName: string, city: string | null | undefined, state: string | null | undefined, taken: Iterable<string>) {
-  const used = new Set(taken);
-  const base = slugify(companyName);
-  if (!used.has(base)) return base;
+  const name = slugify(companyName);
   const place = [city ?? "", state && state !== "OUT" ? state : ""].map(part => slugify(part)).filter(part => part && part !== "client").join("-");
-  const located = place ? `${base}-${place}`.slice(0, 78).replace(/-+$/g, "") : base;
-  return nextFreeSlug(located, used);
+  const slug = (place ? `${name}-${place}` : name).slice(0, 78).replace(/-+$/g, "");
+  return nextFreeSlug(slug, taken);
 }
 
-/** First free slug: base, base-2, base-3... */
+/** First free slug: base, then base-1, base-2... for duplicates. */
 export function nextFreeSlug(base: string, taken: Iterable<string>) {
   const used = new Set(taken);
   if (!used.has(base)) return base;
-  for (let n = 2; ; n++) if (!used.has(`${base}-${n}`)) return `${base}-${n}`;
+  for (let n = 1; ; n++) if (!used.has(`${base}-${n}`)) return `${base}-${n}`;
 }
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
