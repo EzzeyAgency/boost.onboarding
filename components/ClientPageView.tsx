@@ -35,7 +35,7 @@ export type ClientPageData = {
 };
 
 /** The at-a-glance client page. Pure display, so it can be rendered from any data source. */
-export default function ClientPageView({ page, submission, draft, pageUrl }: { page: { slug: string; email: string; companyName: string }; submission: ClientPageData["submission"]; draft: ClientPageData["draft"]; pageUrl: string }) {
+export default function ClientPageView({ page, submission, draft, pageUrl, signedIn = false, isAdmin = false }: { page: { slug: string; email: string; companyName: string }; submission: ClientPageData["submission"]; draft: ClientPageData["draft"]; pageUrl: string; signedIn?: boolean; isAdmin?: boolean }) {
   const answers = (submission?.answers ?? draft?.data ?? {}) as Answers;
   const accessStatus = submission?.googleAccessStatus ?? draft?.googleAccessStatus ?? null;
   const access = accessStatus ? accessTone[accessStatus] : null;
@@ -45,15 +45,18 @@ export default function ClientPageView({ page, submission, draft, pageUrl }: { p
   const phone = str(answers.businessPhone) || str(answers.mobileNumber);
   const preferredContact = answers.preferredContact === CONTACT_OTHER ? str(answers.preferredContactOther) : str(answers.preferredContact);
   const updates = [str(answers.reportRecipients), answers.communicationPreference === COMM_OTHER ? str(answers.communicationOther) : str(answers.communicationPreference)].filter(Boolean).join(" · Prefers: ");
+  const state = str(answers.businessState);
+  const location = [str(answers.businessCity), state === "OUT" ? "Outside the US" : state].filter(Boolean).join(", ");
   const stoppedAt = draft ? steps[Math.min(draft.step, steps.length - 1)] : null;
 
   return <main className="app-shell">
-    <BrandHeader signOut={<SignOutButton />} />
+    <BrandHeader signOut={signedIn ? <SignOutButton /> : undefined} />
     <section className="business-detail-page client-page">
       <div className="business-detail-hero">
         <div>
           <p className="eyebrow">BOOST CLIENT ONBOARDING</p>
           <h1>{str(answers.companyName) || page.companyName}</h1>
+          {location && <p className="client-location">{location}</p>}
           <p>{submission ? <>Onboarding submitted <LocalDate value={submission.submittedAt} />.</> : <>Onboarding in progress. Last saved <LocalDate value={draft!.updatedAt} />.</>}</p>
         </div>
         <div className="business-statuses">
@@ -72,7 +75,7 @@ export default function ClientPageView({ page, submission, draft, pageUrl }: { p
       <div className="client-actions">
         <CopyLink url={pageUrl} />
         <a className="secondary-button" href={`mailto:${page.email}`}><Mail size={16} /> Email {str(answers.firstName) || "contact"}</a>
-        <Link className="secondary-button" href={submission ? `/leads/${submission.id}` : `/leads/drafts/${draft!.id}`}><CalendarDays size={16} /> Open in leads</Link>
+        {isAdmin && <Link className="secondary-button" href={submission ? `/leads/${submission.id}` : `/leads/drafts/${draft!.id}`}><CalendarDays size={16} /> Open in leads</Link>}
       </div>
 
       {stoppedAt && <div className="business-detail-intro"><ShieldCheck size={20} /><p>They haven't submitted yet. They stopped at <b>{stoppedAt.label}</b>. Use this page to help them finish, especially any Google step.</p></div>}

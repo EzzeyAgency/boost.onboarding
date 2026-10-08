@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   // The customer's page switches from their draft to the submitted answers (or is created now if they never saved).
   let pageUrl: string | null = null;
   try {
-    const { page } = await ensureClientPage({ email: input.email, companyName: input.companyName, draftId, submissionId: id });
+    const { page } = await ensureClientPage({ email: input.email, companyName: input.companyName, city: input.businessCity, state: input.businessState, draftId, submissionId: id });
     pageUrl = clientPageUrl(request, page.slug);
   } catch (error) {
     console.error("client page failed", error instanceof Error ? error.name : "unknown");

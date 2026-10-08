@@ -65,6 +65,7 @@ export function OnboardingProfile({ answers, googleAccessStatus }: { answers: An
     <DetailSection title="Business overview" caption="A quick profile to anchor the conversation." items={[
       item("What the business does", answers.businessDescription),
       item("Contact's role", answers.businessRole),
+      item("Based in", [answers.businessCity, answers.businessState === "OUT" ? "Outside the US" : answers.businessState].filter(Boolean).join(", ")),
       item("Website", website, true),
       item("What's holding the business back", answers.holdingBack),
       item("What makes it different", answers.differentiator),

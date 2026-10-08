@@ -28,6 +28,7 @@ import {
   setupOptions,
   statusCheckOptions,
   steps,
+  usStates,
   websiteStatusOptions,
 } from "@/lib/form";
 import { stepIssues } from "@/lib/validation";
@@ -44,7 +45,7 @@ const initialState: FormState = {
   serviceMode: "", businessAddress: "", businessPhone: "", businessHours: "", googleAuthority: "",
   setupStatus: "", setupHelp: "",
   recoveryContactName: "", recoveryContactEmail: "", recoveryIssue: "", recoveryIssueOther: "", recoveryHelp: "", statusCheckHelp: "",
-  firstName: "", lastName: "", email: "", companyName: "", businessRole: "",
+  firstName: "", lastName: "", email: "", companyName: "", businessRole: "", businessCity: "", businessState: "",
   websiteStatus: "", website: "", businessDescription: "", growthFocus: "", growthAreas: "",
   preferredContact: "", preferredContactOther: "", holdingBack: "", differentiator: "", exclusions: "",
   success90: "", successYear: "", highValueWork: "", competitors: "", optionalKeywords: "",
@@ -108,7 +109,7 @@ export default function OnboardingForm() {
   const [loaded, setLoaded] = useState(false);
   const canvasRef = useRef<HTMLElement>(null);
 
-  const setValue: SetValue = useCallback((key, value) => setForm(previous => ({ ...previous, [key]: value })), []);
+  const setValue: SetValue = useCallback((key, value) => { setError(""); setForm(previous => ({ ...previous, [key]: value })); }, []);
   const emailOk = EMAIL_PATTERN.test(String(form.email).trim());
 
   // Restore saved progress: a resume link wins over this device's copy.
@@ -484,6 +485,15 @@ function ContactStep({ form, setValue }: StepProps) {
     <div className="two-column">
       <Field label="Business name" required><Text autoComplete="organization" value={form.companyName} onChange={value => setValue("companyName", value)} /></Field>
       <Field label="Your role" required><Text value={form.businessRole} placeholder="Owner, manager, office lead..." onChange={value => setValue("businessRole", value)} /></Field>
+    </div>
+    <div className="two-column">
+      <Field label="City your business is based in" required><Text autoComplete="address-level2" value={form.businessCity} onChange={value => setValue("businessCity", value)} /></Field>
+      <Field label="State" required>
+        <select value={String(form.businessState)} autoComplete="address-level1" onChange={event => setValue("businessState", event.target.value)}>
+          <option value="">Choose a state</option>
+          {usStates.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+        </select>
+      </Field>
     </div>
     <div className="part-break"><Sparkles size={18} /><span><b>Part 1 is almost done.</b> Next, a few questions so we can get to know your business and focus on what matters to you.</span></div>
   </div>;

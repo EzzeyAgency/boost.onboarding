@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getAdmin } from "@/auth";
-import AccessPage from "@/components/AccessPage";
 import ClientPageView from "@/components/ClientPageView";
 import { getDraftById, getPageBySlug, getSubmissionById } from "@/lib/db";
 import { SLUG_PATTERN } from "@/lib/slug";
@@ -14,10 +13,7 @@ export default async function ClientPage({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   if (!SLUG_PATTERN.test(slug)) notFound();
 
-  const admin = await getAdmin();
-  // Sign-in check comes before any lookup, so business names can't be probed.
-  if (!admin.isAdmin) return <AccessPage signedIn={admin.signedIn} redirectTo={`/${slug}`} subject="this client page" />;
-
+  // Open to anyone with the link (shared through HighLevel and Teamwork). Kept out of search engines.
   const page = await getPageBySlug(slug);
   if (!page) notFound();
 
@@ -27,5 +23,6 @@ export default async function ClientPage({ params }: { params: Promise<{ slug: s
 
   const host = (await headers()).get("host");
   const pageUrl = `${process.env.PUBLIC_BASE_URL?.replace(/\/$/, "") || `https://${host}`}/${page.slug}`;
-  return <ClientPageView page={page} submission={submission} draft={draft} pageUrl={pageUrl} />;
+  const admin = await getAdmin().catch(() => ({ signedIn: false, isAdmin: false }));
+  return <ClientPageView page={page} submission={submission} draft={draft} pageUrl={pageUrl} signedIn={admin.signedIn} isAdmin={admin.isAdmin} />;
 }

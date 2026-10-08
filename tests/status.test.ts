@@ -81,7 +81,7 @@ describe("required fields and conditional rules", () => {
   it("validates one step at a time", () => {
     expect(stepIssues({ googleProfileState: "verified_accessible" }, 0)).toEqual([]);
     expect(stepIssues({ googleProfileState: "verified_accessible" }, 1).map(issue => issue.path[0])).toEqual(["googleAccessCompletion"]);
-    expect(stepIssues({}, 2).map(issue => issue.path[0])).toEqual(expect.arrayContaining(["firstName", "email", "companyName"]));
+    expect(stepIssues({}, 2).map(issue => issue.path[0])).toEqual(expect.arrayContaining(["firstName", "email", "companyName", "businessCity", "businessState"]));
   });
   it("starts with the Google question and maps fields to steps", () => {
     expect(stepForField("googleProfileState")).toBe(0);

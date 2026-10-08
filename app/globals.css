@@ -237,3 +237,4 @@ fieldset.form-field legend { padding:0; }
 @media (max-width:900px) { .glance-grid { grid-template-columns:1fr 1fr; } }
 @media (max-width:620px) { .glance-grid { grid-template-columns:1fr; } .glance-card.wide { grid-column:auto; } .client-actions .secondary-button { flex:1 1 100%; } }
 .client-page-link { margin:-.6rem 0 1.2rem; }
+.client-location { margin:-.2rem 0 .5rem !important; color:#3f5965 !important; font-weight:750; }

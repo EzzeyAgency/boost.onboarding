@@ -75,6 +75,17 @@ export const COMM_OTHER = "Other";
 export const COMM_TEXT = "Text message";
 export const communicationOptions = ["Email", COMM_TEXT, "Phone call", COMM_OTHER] as const;
 
+export const usStates = [
+  ["AL", "Alabama"], ["AK", "Alaska"], ["AZ", "Arizona"], ["AR", "Arkansas"], ["CA", "California"], ["CO", "Colorado"], ["CT", "Connecticut"],
+  ["DE", "Delaware"], ["DC", "District of Columbia"], ["FL", "Florida"], ["GA", "Georgia"], ["HI", "Hawaii"], ["ID", "Idaho"], ["IL", "Illinois"],
+  ["IN", "Indiana"], ["IA", "Iowa"], ["KS", "Kansas"], ["KY", "Kentucky"], ["LA", "Louisiana"], ["ME", "Maine"], ["MD", "Maryland"],
+  ["MA", "Massachusetts"], ["MI", "Michigan"], ["MN", "Minnesota"], ["MS", "Mississippi"], ["MO", "Missouri"], ["MT", "Montana"], ["NE", "Nebraska"],
+  ["NV", "Nevada"], ["NH", "New Hampshire"], ["NJ", "New Jersey"], ["NM", "New Mexico"], ["NY", "New York"], ["NC", "North Carolina"],
+  ["ND", "North Dakota"], ["OH", "Ohio"], ["OK", "Oklahoma"], ["OR", "Oregon"], ["PA", "Pennsylvania"], ["RI", "Rhode Island"],
+  ["SC", "South Carolina"], ["SD", "South Dakota"], ["TN", "Tennessee"], ["TX", "Texas"], ["UT", "Utah"], ["VT", "Vermont"], ["VA", "Virginia"],
+  ["WA", "Washington"], ["WV", "West Virginia"], ["WI", "Wisconsin"], ["WY", "Wyoming"], ["PR", "Puerto Rico"], ["OUT", "Outside the US"],
+] as const;
+
 export const supportTopics = [
   "Google Business Profile setup",
   "Google Business Profile verification",
@@ -101,7 +112,7 @@ export const REVIEW_STEP = steps.length - 1;
 export const STEP_FIELDS: Record<number, readonly string[]> = {
   0: ["googleProfileState"],
   1: ["googleAccessCompletion", "googleAccessHelp", "serviceMode", "businessAddress", "businessPhone", "businessHours", "googleAuthority", "setupStatus", "setupHelp", "recoveryContactName", "recoveryContactEmail", "recoveryIssue", "recoveryIssueOther", "recoveryHelp", "statusCheckHelp"],
-  2: ["firstName", "lastName", "email", "companyName", "businessRole"],
+  2: ["firstName", "lastName", "email", "companyName", "businessRole", "businessCity", "businessState"],
   3: ["websiteStatus", "website", "businessDescription", "growthFocus", "growthAreas", "preferredContact", "preferredContactOther", "holdingBack", "differentiator", "exclusions"],
   4: ["success90", "successYear", "highValueWork", "competitors", "optionalKeywords"],
   5: ["responseOwner", "callTracking", "outcomesTracking", "formDestination", "leadChallenges"],

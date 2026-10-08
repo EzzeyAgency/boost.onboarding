@@ -13,6 +13,7 @@ import {
   SETUP_DONE,
   SETUP_HELP,
   googleProfileOptions,
+  usStates,
   stepForField,
   supportTopics,
 } from "@/lib/form";
@@ -48,6 +49,8 @@ const onboardingBase = z.object({
     email: z.string({ error: "Please enter a valid email address." }).trim().email("Please enter a valid email address.").max(320),
     companyName: requiredText(255, "Please enter your business name."),
     businessRole: requiredText(160, "Please tell us your role in the business."),
+    businessCity: requiredText(120, "Please enter the city your business is based in."),
+    businessState: z.enum(usStates.map(([code]) => code) as [string, ...string[]], { error: "Please choose the state your business is based in." }),
 
     // Part 2: Your business
     websiteStatus: z.enum(["yes", "unsure", "no"], { error: "Please tell us whether your business has a website." }),

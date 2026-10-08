@@ -179,7 +179,7 @@ describe("webhook routing", async () => {
 describe("client pages and Onboarding Info", () => {
   it("creates the page once the details step is done and sends Onboarding Info", async () => {
     await saveDraftRoute(post({ email: "jane@example.com", step: 3, data: { firstName: "Jane", companyName: "Smith Plumbing" } }));
-    expect(db.ensureClientPage).toHaveBeenCalledWith({ email: "jane@example.com", companyName: "Smith Plumbing", draftId: 7 });
+    expect(db.ensureClientPage).toHaveBeenCalledWith({ email: "jane@example.com", companyName: "Smith Plumbing", city: null, state: null, draftId: 7 });
     expect(webhook.sendWebhook).toHaveBeenCalledWith("onboarding.page_created", expect.objectContaining({ email: "jane@example.com", "Onboarding Info": "https://boost.test/smith-plumbing" }));
   });
   it("does not create a page while the business name may still be half-typed", async () => {
@@ -202,13 +202,22 @@ describe("client pages and Onboarding Info", () => {
   });
   it("moves the page to the submission and sends Onboarding Info on submit", async () => {
     await onboardingRoute(post({ ...baseOnboarding, googleProfileState: "not_sure", statusCheckHelp: "I need help", draftToken: "d".repeat(43) }));
-    expect(db.ensureClientPage).toHaveBeenCalledWith({ email: "jane@example.com", companyName: "Smith Plumbing", draftId: 7, submissionId: 1 });
+    expect(db.ensureClientPage).toHaveBeenCalledWith({ email: "jane@example.com", companyName: "Smith Plumbing", city: "Tempe", state: "AZ", draftId: 7, submissionId: 1 });
     expect(webhook.sendWebhook).toHaveBeenCalledWith("onboarding.submitted", expect.objectContaining({ email: "jane@example.com", status: "Submitted", "Onboarding Info": "https://boost.test/smith-plumbing" }));
   });
 });
 
 describe("slugs", async () => {
-  const { slugify, nextFreeSlug, SLUG_PATTERN } = await import("@/lib/slug");
+  const { slugify, nextFreeSlug, clientSlug, SLUG_PATTERN } = await import("@/lib/slug");
+  it("gives a second business with the same name its city and state", () => {
+    expect(clientSlug("Smith Plumbing", "Tempe", "AZ", [])).toBe("smith-plumbing");
+    expect(clientSlug("Smith Plumbing", "Tempe", "AZ", ["smith-plumbing"])).toBe("smith-plumbing-tempe-az");
+    expect(clientSlug("Smith Plumbing", "St. Louis", "MO", ["smith-plumbing"])).toBe("smith-plumbing-st-louis-mo");
+    expect(clientSlug("Smith Plumbing", "Tempe", "AZ", ["smith-plumbing", "smith-plumbing-tempe-az"])).toBe("smith-plumbing-tempe-az-2");
+    expect(clientSlug("Smith Plumbing", "Toronto", "OUT", ["smith-plumbing"])).toBe("smith-plumbing-toronto");
+    expect(clientSlug("Smith Plumbing", null, null, ["smith-plumbing"])).toBe("smith-plumbing-2");
+    expect(SLUG_PATTERN.test(clientSlug("Smith Plumbing", "Tempe", "AZ", ["smith-plumbing"]))).toBe(true);
+  });
   it("turns business names into clean URLs", () => {
     expect(slugify("Smith & Sons Plumbing, LLC")).toBe("smith-and-sons-plumbing-llc");
     expect(slugify("  Café Olé's  ")).toBe("cafe-oles");

@@ -4,6 +4,8 @@ export const baseOnboarding = {
   email: "jane@example.com",
   companyName: "Smith Plumbing",
   businessRole: "Owner",
+  businessCity: "Tempe",
+  businessState: "AZ",
   websiteStatus: "yes",
   website: "https://smithplumbing.example",
   businessDescription: "Residential plumbing repair and installation.",

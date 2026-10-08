@@ -17,6 +17,20 @@ export function slugify(name: string) {
   return RESERVED_SLUGS.has(slug) ? `${slug}-client` : slug;
 }
 
+/**
+ * Slug for a new client page. The first business with a name gets the plain name; a second business
+ * with the same name gets the name plus city and state ("smith-plumbing-tempe-az"). Numbers are only
+ * a last resort, if city and state are missing or that combination is also taken.
+ */
+export function clientSlug(companyName: string, city: string | null | undefined, state: string | null | undefined, taken: Iterable<string>) {
+  const used = new Set(taken);
+  const base = slugify(companyName);
+  if (!used.has(base)) return base;
+  const place = [city ?? "", state && state !== "OUT" ? state : ""].map(part => slugify(part)).filter(part => part && part !== "client").join("-");
+  const located = place ? `${base}-${place}`.slice(0, 78).replace(/-+$/g, "") : base;
+  return nextFreeSlug(located, used);
+}
+
 /** First free slug: base, base-2, base-3... */
 export function nextFreeSlug(base: string, taken: Iterable<string>) {
   const used = new Set(taken);

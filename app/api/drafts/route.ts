@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     let pageUrl: string | null = null;
     if (companyName && (step >= DETAILS_DONE_STEP || notify)) {
       try {
-        const { page, created } = await ensureClientPage({ email: parsed.data.email, companyName, draftId: row.id });
+        const { page, created } = await ensureClientPage({ email: parsed.data.email, companyName, city: text(data.businessCity, 120), state: text(data.businessState, 8), draftId: row.id });
         pageUrl = clientPageUrl(request, page.slug);
         if (created) await sendWebhook("onboarding.page_created", { ...contact, status: "In progress", [ONBOARDING_INFO]: pageUrl });
       } catch (error) {

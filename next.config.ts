@@ -11,7 +11,8 @@ const config: NextConfig = {
   poweredByHeader: false,
   async headers() {
     return [
-      { source: "/:path*", headers: securityHeaders },
+      // Client pages live at /<business-name> and must never show up in search results; nothing here needs indexing.
+      { source: "/:path*", headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }] },
       // Internal lead data must never be indexed or cached by shared caches.
       { source: "/leads/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }, { key: "Cache-Control", value: "private, no-store" }] },
       { source: "/api/submissions/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }] },

@@ -3,7 +3,7 @@ import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { and, desc, eq, gte, isNull, like, lt, or, type SQL } from "drizzle-orm";
 import { clientPages, drafts, submissions, type NewSubmission } from "@/db/schema";
-import { nextFreeSlug, slugify } from "@/lib/slug";
+import { clientSlug, slugify } from "@/lib/slug";
 
 let client: ReturnType<typeof drizzle> | undefined;
 
@@ -138,7 +138,7 @@ export async function getPageFor(ref: { draftId?: number | null; submissionId?: 
  * Returns the customer's page, creating it on first call. The slug comes from the business name,
  * gets -2, -3... when taken, and never changes afterwards so links already shared stay valid.
  */
-export async function ensureClientPage(input: { email: string; companyName: string; draftId?: number | null; submissionId?: number | null }) {
+export async function ensureClientPage(input: { email: string; companyName: string; city?: string | null; state?: string | null; draftId?: number | null; submissionId?: number | null }) {
   const existing = await getPageFor(input);
   if (existing) {
     if (input.submissionId && existing.submissionId !== input.submissionId) {
@@ -149,7 +149,7 @@ export async function ensureClientPage(input: { email: string; companyName: stri
   const base = slugify(input.companyName);
   for (let attempt = 0; attempt < 5; attempt++) {
     const taken = await db().select({ slug: clientPages.slug }).from(clientPages).where(or(eq(clientPages.slug, base), like(clientPages.slug, `${base}-%`)));
-    const slug = nextFreeSlug(base, taken.map(row => row.slug));
+    const slug = clientSlug(input.companyName, input.city, input.state, taken.map(row => row.slug));
     const [page] = await db()
       .insert(clientPages)
       .values({ slug, email: input.email, companyName: input.companyName, draftId: input.draftId ?? null, submissionId: input.submissionId ?? null })
