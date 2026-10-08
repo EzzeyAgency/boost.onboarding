@@ -1,8 +1,8 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { and, desc, eq, gte, lt, type SQL } from "drizzle-orm";
-import { submissions, type NewSubmission } from "@/db/schema";
+import { and, desc, eq, gte, isNull, lt, type SQL } from "drizzle-orm";
+import { drafts, submissions, type NewSubmission } from "@/db/schema";
 
 let client: ReturnType<typeof drizzle> | undefined;
 
@@ -55,5 +55,60 @@ export async function listSubmissions(filters: ListFilters) {
 
 export async function getSubmissionById(id: number) {
   const [row] = await db().select().from(submissions).where(eq(submissions.id, id)).limit(1);
+  return row ?? null;
+}
+
+export type DraftFields = {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  companyName: string | null;
+  googleProfileStatus: string | null;
+  googleAccessStatus: string | null;
+  step: number;
+  data: Record<string, unknown>;
+};
+
+/** Creates or updates a draft identified by the hash of its secret resume token. Completed drafts cannot be changed. */
+export async function saveDraft(tokenHash: string, fields: DraftFields) {
+  const [row] = await db()
+    .insert(drafts)
+    .values({ tokenHash, ...fields })
+    .onConflictDoUpdate({ target: drafts.tokenHash, set: { ...fields, updatedAt: new Date() }, setWhere: isNull(drafts.completedAt) })
+    .returning({ id: drafts.id, createdAt: drafts.createdAt, updatedAt: drafts.updatedAt });
+  return row ?? null;
+}
+
+export async function getDraftByTokenHash(tokenHash: string) {
+  const [row] = await db().select().from(drafts).where(and(eq(drafts.tokenHash, tokenHash), isNull(drafts.completedAt))).limit(1);
+  return row ?? null;
+}
+
+export async function completeDraft(tokenHash: string, submissionId: number) {
+  await db().update(drafts).set({ completedAt: new Date(), submissionId }).where(and(eq(drafts.tokenHash, tokenHash), isNull(drafts.completedAt)));
+}
+
+export async function listOpenDrafts() {
+  return db()
+    .select({
+      id: drafts.id,
+      email: drafts.email,
+      firstName: drafts.firstName,
+      lastName: drafts.lastName,
+      companyName: drafts.companyName,
+      googleProfileStatus: drafts.googleProfileStatus,
+      googleAccessStatus: drafts.googleAccessStatus,
+      step: drafts.step,
+      createdAt: drafts.createdAt,
+      updatedAt: drafts.updatedAt,
+    })
+    .from(drafts)
+    .where(isNull(drafts.completedAt))
+    .orderBy(desc(drafts.updatedAt), desc(drafts.id))
+    .limit(5000);
+}
+
+export async function getDraftById(id: number) {
+  const [row] = await db().select().from(drafts).where(eq(drafts.id, id)).limit(1);
   return row ?? null;
 }

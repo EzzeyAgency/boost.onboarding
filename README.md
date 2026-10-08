@@ -4,9 +4,10 @@ Ezzey's BOOST onboarding app, rebuilt from the Manus version for GitHub and Verc
 
 | Route | Access | Purpose |
 |---|---|---|
-| `/` | Public | Six-step conditional onboarding (any business type) |
+| `/` | Public | Two-part onboarding (Google first, then the business), with save and resume |
 | `/support` | Public | Support request form |
-| `/leads` | Admin only | All leads, all time, newest first; onboarding and support tabs; date filters; CSV export |
+| `/leads` | Admin only | All leads, all time, newest first; onboarding, support and in-progress tabs; date filters; CSV export |
+| `/leads/drafts/[id]` | Admin only | Answers saved so far by a customer who hasn't submitted |
 | `/leads/[id]` | Admin only | Call-ready business or support profile |
 
 Stack: Next.js (App Router), Drizzle ORM, Neon Postgres, Auth.js with Google sign-in.
@@ -41,6 +42,25 @@ Stack: Next.js (App Router), Drizzle ORM, Neon Postgres, Auth.js with Google sig
    | `NEXT_PUBLIC_GBP_SETUP_VIDEO_URL` | `https://www.youtube.com/watch?v=VrawbXIY3V4` |
 6. **Redeploy**, then add the custom domain (e.g. `onboard.boost.ezzey.com`) under Settings > Domains.
 7. **Recommended**: Vercel > Firewall > add a rate-limit rule for `POST /api/onboarding` and `POST /api/support`. The app has a per-instance limiter and a honeypot, but serverless instances do not share memory.
+
+## Save and resume
+
+- Answers are kept in the browser as the customer types, and saved to the `drafts` table once they enter an email (after a 2.5 second pause).
+- "Save and finish later" gives the customer a private link (`/?resume=...`). Only a SHA-256 hash of the link's token is stored.
+- Submitting marks the draft complete. Open drafts appear under **In progress** on `/leads`.
+- Database: run `drizzle/0001_drafts.sql` once in the Neon SQL Editor (or `npm run db:migrate`).
+
+## HighLevel webhook (optional)
+
+Set `HIGHLEVEL_WEBHOOK_URL` to a HighLevel workflow "Inbound Webhook" trigger URL. Every event is a JSON POST with an `event` field:
+
+| Event | When | Useful fields |
+|---|---|---|
+| `onboarding.submitted` | Form submitted | email, name, companyName, formStatus, googleAccessStatus, needsHelp, helpNote, profileUrl |
+| `onboarding.progress_saved` | Customer clicks "Save and finish later" | email, name, companyName, googleProfile, resumeUrl, adminUrl |
+| `support.submitted` | Support form submitted | email, phone, companyName, topic, message, alreadyTried, profileUrl |
+
+Branch the workflow on `event` to create or update the contact, move the pipeline stage, send the acknowledgement email, and notify the team. Failures are logged and never block a customer's submission.
 
 ## Launch checklist
 

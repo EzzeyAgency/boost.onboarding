@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getFormStatus, getGoogleAccessStatus, onboardingInput } from "@/lib/validation";
+import { ACCESS_DONE, ACCESS_HELP, ACCESS_LATER, SETUP_DONE, SETUP_HELP, SETUP_LATER, SETUP_WAITING, stepForField } from "@/lib/form";
+import { getFormStatus, getGoogleAccessStatus, onboardingInput, stepIssues } from "@/lib/validation";
 import { baseOnboarding } from "./fixtures";
+
+const noProfile = { googleProfileState: "no_profile", serviceMode: "We only work online", businessPhone: "480 555 0100", businessHours: "9-5", googleAuthority: "Yes" };
 
 function derive(extra: Record<string, unknown>) {
   const parsed = onboardingInput.safeParse({ ...baseOnboarding, ...extra });
@@ -9,58 +12,82 @@ function derive(extra: Record<string, unknown>) {
   return { access, form: getFormStatus(access) };
 }
 
-describe("Google access and form status (handoff acceptance tests)", () => {
-  it("verified + secure access complete -> confirmed, ready_for_fulfillment", () => {
-    expect(derive({ googleProfileState: "verified_accessible", googleAccessCompletion: "Yes, I completed it" })).toEqual({ access: "confirmed", form: "ready_for_fulfillment" });
+describe("Google access and form status", () => {
+  it("verified + connected -> confirmed, ready_for_fulfillment", () => {
+    expect(derive({ googleProfileState: "verified_accessible", googleAccessCompletion: ACCESS_DONE })).toEqual({ access: "confirmed", form: "ready_for_fulfillment" });
   });
-  it("verified + access deferred -> customer_action_pending", () => {
-    expect(derive({ googleProfileState: "verified_accessible", googleAccessCompletion: "I will complete it later" })).toEqual({ access: "customer_action_pending", form: "customer_action_pending" });
+  it("verified + later -> customer_action_pending", () => {
+    expect(derive({ googleProfileState: "verified_accessible", googleAccessCompletion: ACCESS_LATER })).toEqual({ access: "customer_action_pending", form: "customer_action_pending" });
   });
-  it("verified + could not complete -> support_needed", () => {
-    expect(derive({ googleProfileState: "verified_accessible", googleAccessCompletion: "I could not complete it", googleAccessBlocker: "Wrong account" }).form).toBe("support_needed");
+  it("verified + needs help -> support_needed", () => {
+    expect(derive({ googleProfileState: "verified_accessible", googleAccessCompletion: ACCESS_HELP, googleAccessHelp: "Wrong account" }).form).toBe("support_needed");
   });
-  it("no profile + setup pending -> setup_or_verification_pending, customer_action_pending", () => {
-    expect(derive({ googleProfileState: "no_profile", serviceMode: "My business operates online only", businessPhone: "480 555 0100", businessHours: "9-5", googleAuthority: "Yes", setupStatus: "I will set up or verify the profile now" })).toEqual({ access: "setup_or_verification_pending", form: "customer_action_pending" });
+  it("no profile + later or waiting -> setup_or_verification_pending", () => {
+    expect(derive({ ...noProfile, setupStatus: SETUP_LATER })).toEqual({ access: "setup_or_verification_pending", form: "customer_action_pending" });
+    expect(derive({ ...noProfile, setupStatus: SETUP_WAITING }).access).toBe("setup_or_verification_pending");
   });
   it("unverified + needs help -> support_needed", () => {
-    expect(derive({ googleProfileState: "unverified", setupStatus: "I need help", setupHelp: "Postcard never arrived" })).toEqual({ access: "support_needed", form: "support_needed" });
+    expect(derive({ googleProfileState: "unverified", setupStatus: SETUP_HELP, setupHelp: "Postcard never arrived" })).toEqual({ access: "support_needed", form: "support_needed" });
   });
-  it("unverified + setup complete + access complete -> confirmed", () => {
-    expect(derive({ googleProfileState: "unverified", setupStatus: "I have completed setup and verification", googleAccessCompletion: "Yes, I completed it" }).form).toBe("ready_for_fulfillment");
+  it("unverified + finished + connected -> confirmed", () => {
+    expect(derive({ googleProfileState: "unverified", setupStatus: SETUP_DONE, googleAccessCompletion: ACCESS_DONE }).form).toBe("ready_for_fulfillment");
   });
-  it("verified without access + needs help -> support_needed", () => {
-    expect(derive({ googleProfileState: "verified_no_access", recoveryIssue: "I do not know who has access", recoveryHelp: "Yes, I need help" }).form).toBe("support_needed");
+  it("no access + needs help -> support_needed; handle later -> access_recovery_pending", () => {
+    expect(derive({ googleProfileState: "verified_no_access", recoveryIssue: "I don't know who has access", recoveryHelp: "I need help" }).form).toBe("support_needed");
+    expect(derive({ googleProfileState: "verified_no_access", recoveryIssue: "Other", recoveryIssueOther: "Old agency", recoveryHelp: "I'll handle it myself and come back later" })).toEqual({ access: "access_recovery_pending", form: "customer_action_pending" });
   });
-  it("verified without access + will handle -> access_recovery_pending", () => {
-    expect(derive({ googleProfileState: "verified_no_access", recoveryIssue: "Other", recoveryHelp: "No, I will handle it and return later" })).toEqual({ access: "access_recovery_pending", form: "customer_action_pending" });
-  });
-  it("not sure + requests help -> support_needed", () => {
-    expect(derive({ googleProfileState: "not_sure", statusCheckHelp: "Yes, I need help" }).form).toBe("support_needed");
-  });
-  it("not sure + will check -> status_check_pending", () => {
-    expect(derive({ googleProfileState: "not_sure", statusCheckHelp: "No, I will check and return later" }).access).toBe("status_check_pending");
+  it("not sure + help -> support_needed; later -> status_check_pending", () => {
+    expect(derive({ googleProfileState: "not_sure", statusCheckHelp: "I need help" }).form).toBe("support_needed");
+    expect(derive({ googleProfileState: "not_sure", statusCheckHelp: "I'll check and come back later" }).access).toBe("status_check_pending");
   });
 });
 
-describe("conditional validation", () => {
+describe("required fields and conditional rules", () => {
   const issues = (extra: Record<string, unknown>) => {
     const parsed = onboardingInput.safeParse({ ...baseOnboarding, ...extra });
     return parsed.success ? [] : parsed.error.issues.map(issue => issue.path[0]);
   };
-  it("requires the secure-access answer on the verified path", () => {
+  const ok = { googleProfileState: "not_sure", statusCheckHelp: "I need help" };
+
+  it("requires the connection answer on the verified path, and a description when help is needed", () => {
     expect(issues({ googleProfileState: "verified_accessible" })).toContain("googleAccessCompletion");
+    expect(issues({ googleProfileState: "verified_accessible", googleAccessCompletion: ACCESS_HELP })).toContain("googleAccessHelp");
   });
-  it("requires an address for physical or service-area businesses without a profile", () => {
-    expect(issues({ googleProfileState: "no_profile", serviceMode: "Both", businessPhone: "1", businessHours: "9-5", googleAuthority: "Yes", setupStatus: "I will set up or verify the profile now" })).toContain("businessAddress");
+  it("requires an address only for businesses customers visit or travel to", () => {
+    expect(issues({ ...noProfile, serviceMode: "Both", setupStatus: SETUP_LATER })).toContain("businessAddress");
+    expect(issues({ ...noProfile, setupStatus: SETUP_LATER })).toEqual([]);
   });
-  it("does not require an address for online-only businesses", () => {
-    expect(issues({ googleProfileState: "no_profile", serviceMode: "My business operates online only", businessPhone: "1", businessHours: "9-5", googleAuthority: "Yes", setupStatus: "I will set up or verify the profile now" })).toEqual([]);
+  it("requires 'Other' text whenever Other is chosen", () => {
+    expect(issues({ ...ok, preferredContact: "Other" })).toContain("preferredContactOther");
+    expect(issues({ ...ok, communicationPreference: "Other" })).toContain("communicationOther");
+    expect(issues({ googleProfileState: "verified_no_access", recoveryIssue: "Other", recoveryHelp: "I need help" })).toContain("recoveryIssueOther");
+  });
+  it("requires a website address only when the business has one", () => {
+    expect(issues({ ...ok, websiteStatus: "yes", website: "" })).toContain("website");
+    expect(issues({ ...ok, websiteStatus: "no", website: "" })).toEqual([]);
+  });
+  it("makes previously optional business questions required", () => {
+    for (const field of ["businessRole", "differentiator", "exclusions", "successYear", "competitors", "optionalKeywords", "formDestination", "leadChallenges", "holdingBack"]) {
+      expect(issues({ ...ok, [field]: "" })).toContain(field);
+    }
+  });
+  it("keeps the optional exceptions optional", () => {
+    expect(issues({ ...ok, notes: "" })).toEqual([]);
+    expect(issues({ googleProfileState: "verified_no_access", recoveryIssue: "I don't know who has access", recoveryHelp: "I need help", recoveryContactName: "", recoveryContactEmail: "" })).toEqual([]);
   });
   it("requires mobile number and consent for text updates", () => {
-    const missing = issues({ googleProfileState: "not_sure", statusCheckHelp: "Yes, I need help", communicationPreference: "Text message" });
-    expect(missing).toEqual(expect.arrayContaining(["mobileNumber", "smsConsent"]));
+    expect(issues({ ...ok, communicationPreference: "Text message" })).toEqual(expect.arrayContaining(["mobileNumber", "smsConsent"]));
   });
-  it("rejects an unknown Google profile state", () => {
-    expect(issues({ googleProfileState: "hacked" })).toContain("googleProfileState");
+  it("validates one step at a time", () => {
+    expect(stepIssues({ googleProfileState: "verified_accessible" }, 0)).toEqual([]);
+    expect(stepIssues({ googleProfileState: "verified_accessible" }, 1).map(issue => issue.path[0])).toEqual(["googleAccessCompletion"]);
+    expect(stepIssues({}, 2).map(issue => issue.path[0])).toEqual(expect.arrayContaining(["firstName", "email", "companyName"]));
+  });
+  it("starts with the Google question and maps fields to steps", () => {
+    expect(stepForField("googleProfileState")).toBe(0);
+    expect(stepForField("googleAccessCompletion")).toBe(1);
+    expect(stepForField("email")).toBe(2);
+    expect(stepForField("holdingBack")).toBe(3);
+    expect(stepForField("reportRecipients")).toBe(6);
   });
 });

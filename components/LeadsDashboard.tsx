@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, Filter, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { toCsvCell } from "@/lib/csv";
+import { steps } from "@/lib/form";
 
 type SubmissionTab = "all" | "onboarding" | "support";
 type DateFilters = { fromDate: string; toDate: string };
@@ -81,7 +82,8 @@ function useSubmissions(activeTab: SubmissionTab, filters: DateFilters) {
 }
 
 export default function LeadsDashboard() {
-  const [activeTab, setActiveTab] = useState<SubmissionTab>("all");
+  const [view, setView] = useState<SubmissionTab | "drafts">("all");
+  const activeTab: SubmissionTab = view === "drafts" ? "all" : view;
   const [draft, setDraft] = useState<DateFilters>({ fromDate: "", toDate: "" });
   const [filters, setFilters] = useState<DateFilters>({ fromDate: "", toDate: "" });
   const query = useSubmissions(activeTab, filters);
@@ -94,7 +96,7 @@ export default function LeadsDashboard() {
     ready: rows.filter(row => row.formStatus === "ready_for_fulfillment").length,
     supportNeeded: rows.filter(row => row.formStatus === "support_needed").length,
     googleHelp: rows.filter(row => (row.supportTopic ?? "").toLowerCase().includes("google")).length,
-    onboardingHelp: rows.filter(row => row.supportTopic === "Onboarding form").length,
+    onboardingHelp: rows.filter(row => row.supportTopic === "Onboarding form" || row.supportTopic === "This onboarding form").length,
   }), [rows]);
 
   const exportCsv = () => {
@@ -130,14 +132,15 @@ export default function LeadsDashboard() {
           id={`${tab}-tab`}
           role="tab"
           type="button"
-          aria-selected={activeTab === tab}
+          aria-selected={view === tab}
           aria-controls="submission-panel"
-          className={activeTab === tab ? "active" : ""}
-          onClick={() => setActiveTab(tab)}
+          className={view === tab ? "active" : ""}
+          onClick={() => setView(tab)}
         >{tabCopy[tab].label}</button>)}
+        <button id="drafts-tab" role="tab" type="button" aria-selected={view === "drafts"} aria-controls="submission-panel" className={view === "drafts" ? "active" : ""} onClick={() => setView("drafts")}>In progress</button>
       </div>
 
-      <div id="submission-panel" role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
+      {view === "drafts" ? <DraftsPanel /> : <div id="submission-panel" role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
         <div className="queue-heading"><div><h2>{copy.title}</h2><p>{copy.description}</p></div><span>{rows.length} record{rows.length === 1 ? "" : "s"} · {dateScope}</span></div>
         <div className="summary-row">
           {activeTab === "support" ? <>
@@ -161,7 +164,7 @@ export default function LeadsDashboard() {
         {query.isLoading ? <div className="table-state">Loading {activeTab === "all" ? "all leads" : activeTab === "support" ? "support requests" : "onboarding submissions"}...</div>
           : query.error ? <div className="table-state error">{query.error}</div>
           : activeTab === "all" ? <AllLeadsTable rows={rows} /> : activeTab === "onboarding" ? <OnboardingTable rows={rows} /> : <SupportTable rows={rows} />}
-      </div>
+      </div>}
     </section>;
 }
 
@@ -183,4 +186,37 @@ function EmptyRow({ columns, message }: { columns: number; message: string }) {
 
 function ProfileLink({ id }: { id: number }) {
   return <Link className="view-business-link" href={`/leads/${id}`}>View business data</Link>;
+}
+
+type DraftRow = { id: number; email: string; firstName: string | null; lastName: string | null; companyName: string | null; googleProfileStatus: string | null; googleAccessStatus: string | null; step: number; createdAt: string; updatedAt: string };
+
+/** Onboarding forms customers started but haven't submitted, so the team can follow up. */
+function DraftsPanel() {
+  const [rows, setRows] = useState<DraftRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/drafts/list", { cache: "no-store" })
+      .then(async response => { if (!response.ok) throw new Error(); return (await response.json()) as { rows: DraftRow[] }; })
+      .then(result => setRows(result.rows))
+      .catch(() => setError("We could not load in-progress onboarding. Refresh the page and try again."));
+  }, []);
+
+  const exportCsv = () => {
+    if (!rows) return;
+    const header = ["Draft ID", "Last saved", "Started", "Name", "Company", "Email", "Google profile", "Google access status", "Stopped at step"];
+    const body = rows.map(row => [row.id, new Date(row.updatedAt).toLocaleString(), new Date(row.createdAt).toLocaleString(), [row.firstName, row.lastName].filter(Boolean).join(" "), row.companyName, row.email, row.googleProfileStatus, row.googleAccessStatus, `${row.step + 1}. ${steps[Math.min(row.step, steps.length - 1)].label}`]);
+    const csv = [header, ...body].map(row => row.map(toCsvCell).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `boost-onboarding-in-progress-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return <div id="submission-panel" role="tabpanel" aria-labelledby="drafts-tab">
+    <div className="queue-heading"><div><h2>In-progress onboarding</h2><p>Customers who started the form but haven't submitted yet, newest activity first. Use this to follow up and help them finish, especially any Google step.</p></div><span>{rows?.length ?? 0} open</span></div>
+    <div className="filters"><button type="button" className="export-button" onClick={exportCsv} disabled={!rows?.length}><Download size={16} /> Export CSV</button></div>
+    {error ? <div className="table-state error">{error}</div> : !rows ? <div className="table-state">Loading in-progress onboarding...</div> : <div className="table-wrap"><table className="leads-table"><thead><tr><th>Last saved</th><th>Company</th><th>Contact</th><th>Google profile</th><th>Stopped at</th><th>Answers so far</th></tr></thead><tbody>{rows.length ? rows.map(row => <tr key={row.id}><td>{new Date(row.updatedAt).toLocaleDateString()}<small>{new Date(row.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small></td><td><b>{row.companyName || "Not entered yet"}</b></td><td><a href={`mailto:${row.email}`}>{[row.firstName, row.lastName].filter(Boolean).join(" ") || row.email}</a><small>{row.email}</small></td><td><span className="status-text">{displayStatus(row.googleAccessStatus)}</span></td><td>Step {row.step + 1}<small>{steps[Math.min(row.step, steps.length - 1)].label}</small></td><td><Link className="view-business-link" href={`/leads/drafts/${row.id}`}>View answers</Link></td></tr>) : <EmptyRow columns={6} message="No one has an unfinished onboarding right now." />}</tbody></table></div>}
+  </div>;
 }

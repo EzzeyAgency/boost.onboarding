@@ -15,7 +15,7 @@ export default function BrandHeader({ signOut }: { signOut?: React.ReactNode }) 
       </Link>
       <nav className="brand-nav" aria-label="Primary navigation">
         <Link className={pathname === "/" ? "active" : ""} href="/">Onboarding</Link>
-        <Link className={pathname === "/support" ? "active" : ""} href="/support">Support</Link>
+        <Link className={pathname === "/support" ? "active" : ""} href="/support">Get help</Link>
         {signOut}
         <a href="https://ezzey.com/" target="_blank" rel="noreferrer" className="site-link">Ezzey.com <ArrowUpRight size={14} /></a>
       </nav>
