@@ -11,10 +11,11 @@ const db = {
   getSubmissionById: vi.fn(async () => ({ id: 1 })),
   saveDraft: vi.fn(async () => ({ id: 7, createdAt: new Date(), updatedAt: new Date() }) as { id: number; createdAt: Date; updatedAt: Date } | null),
   getDraftByTokenHash: vi.fn(async () => ({ data: { firstName: "Jane" }, step: 3, email: "jane@example.com" }) as unknown),
-  completeDraft: vi.fn(async () => {}),
+  completeDraft: vi.fn(async () => 7 as number | null),
+  ensureClientPage: vi.fn(async () => ({ page: { slug: "smith-plumbing" }, created: true })),
   listOpenDrafts: vi.fn(async () => []),
 };
-const webhook = { sendWebhook: vi.fn(async () => true), originOf: () => "https://boost.test" };
+const webhook = { sendWebhook: vi.fn(async () => true), originOf: () => "https://boost.test", clientPageUrl: (_r: Request, slug: string) => `https://boost.test/${slug}`, ONBOARDING_INFO: "Onboarding Info" };
 
 vi.mock("@/auth", () => ({ getAdmin: async () => adminState }));
 vi.mock("@/lib/db", () => db);
@@ -172,5 +173,65 @@ describe("webhook routing", async () => {
     expect(webhookUrlFor("onboarding.submitted", env)).toBeNull();
     expect(webhookUrlFor("onboarding.progress_saved", { ...env, HIGHLEVEL_ONBOARDING_WEBHOOK_URL: "https://hl/onb" })).toBe("https://hl/onb");
     expect(webhookUrlFor("onboarding.submitted", { HIGHLEVEL_WEBHOOK_URL: "https://hl/all" })).toBe("https://hl/all");
+  });
+});
+
+describe("client pages and Onboarding Info", () => {
+  it("creates the page once the details step is done and sends Onboarding Info", async () => {
+    await saveDraftRoute(post({ email: "jane@example.com", step: 3, data: { firstName: "Jane", companyName: "Smith Plumbing" } }));
+    expect(db.ensureClientPage).toHaveBeenCalledWith({ email: "jane@example.com", companyName: "Smith Plumbing", draftId: 7 });
+    expect(webhook.sendWebhook).toHaveBeenCalledWith("onboarding.page_created", expect.objectContaining({ email: "jane@example.com", "Onboarding Info": "https://boost.test/smith-plumbing" }));
+  });
+  it("does not create a page while the business name may still be half-typed", async () => {
+    await saveDraftRoute(post({ email: "jane@example.com", step: 2, data: { companyName: "Smi" } }));
+    expect(db.ensureClientPage).not.toHaveBeenCalled();
+  });
+  it("does not resend page_created for an existing page", async () => {
+    db.ensureClientPage.mockResolvedValueOnce({ page: { slug: "smith-plumbing" }, created: false });
+    await saveDraftRoute(post({ email: "jane@example.com", step: 5, data: { companyName: "Smith Plumbing" } }));
+    expect(webhook.sendWebhook).not.toHaveBeenCalled();
+  });
+  it("includes Onboarding Info when saving for later", async () => {
+    db.ensureClientPage.mockResolvedValueOnce({ page: { slug: "smith-plumbing" }, created: false });
+    await saveDraftRoute(post({ email: "jane@example.com", step: 2, data: { companyName: "Smith Plumbing" }, notify: true }));
+    expect(webhook.sendWebhook).toHaveBeenCalledWith("onboarding.progress_saved", expect.objectContaining({ "Onboarding Info": "https://boost.test/smith-plumbing" }));
+  });
+  it("still saves the draft if the page can't be created", async () => {
+    db.ensureClientPage.mockRejectedValueOnce(new Error("table missing"));
+    expect((await saveDraftRoute(post({ email: "jane@example.com", step: 4, data: { companyName: "Smith Plumbing" } }))).status).toBe(200);
+  });
+  it("moves the page to the submission and sends Onboarding Info on submit", async () => {
+    await onboardingRoute(post({ ...baseOnboarding, googleProfileState: "not_sure", statusCheckHelp: "I need help", draftToken: "d".repeat(43) }));
+    expect(db.ensureClientPage).toHaveBeenCalledWith({ email: "jane@example.com", companyName: "Smith Plumbing", draftId: 7, submissionId: 1 });
+    expect(webhook.sendWebhook).toHaveBeenCalledWith("onboarding.submitted", expect.objectContaining({ email: "jane@example.com", status: "Submitted", "Onboarding Info": "https://boost.test/smith-plumbing" }));
+  });
+});
+
+describe("slugs", async () => {
+  const { slugify, nextFreeSlug, SLUG_PATTERN } = await import("@/lib/slug");
+  it("turns business names into clean URLs", () => {
+    expect(slugify("Smith & Sons Plumbing, LLC")).toBe("smith-and-sons-plumbing-llc");
+    expect(slugify("  Café Olé's  ")).toBe("cafe-oles");
+    expect(slugify("!!!")).toBe("client");
+    expect(slugify("Support")).toBe("support-client");
+    expect(slugify("Leads")).toBe("leads-client");
+    expect(slugify("x".repeat(100)).length).toBeLessThanOrEqual(60);
+    expect(SLUG_PATTERN.test(slugify("Smith & Sons Plumbing, LLC"))).toBe(true);
+  });
+  it("adds -2, -3 for duplicate names", () => {
+    expect(nextFreeSlug("acme", [])).toBe("acme");
+    expect(nextFreeSlug("acme", ["acme"])).toBe("acme-2");
+    expect(nextFreeSlug("acme", ["acme", "acme-2", "acme-plumbing"])).toBe("acme-3");
+  });
+});
+
+describe("Zapier routing", async () => {
+  const { zapierUrlFor } = await import("@/lib/webhook-routing");
+  it("sends onboarding events to Zapier, never support", () => {
+    const env = { ZAPIER_WEBHOOK_URL: "https://hooks.zapier.com/x" };
+    expect(zapierUrlFor("onboarding.page_created", env)).toBe("https://hooks.zapier.com/x");
+    expect(zapierUrlFor("onboarding.submitted", env)).toBe("https://hooks.zapier.com/x");
+    expect(zapierUrlFor("support.submitted", env)).toBeNull();
+    expect(zapierUrlFor("onboarding.submitted", {})).toBeNull();
   });
 });

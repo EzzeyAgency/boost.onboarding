@@ -7,7 +7,7 @@ import BrandHeader from "@/components/BrandHeader";
 import LocalDate from "@/components/LocalDate";
 import { SignOutButton } from "@/components/AuthButtons";
 import { OnboardingProfile, displayValue } from "@/components/ProfileSections";
-import { getDraftById } from "@/lib/db";
+import { getDraftById, getPageFor } from "@/lib/db";
 import { steps } from "@/lib/form";
 
 export const metadata: Metadata = { title: "In-progress onboarding | BOOST", robots: { index: false, follow: false } };
@@ -21,6 +21,7 @@ export default async function DraftDetail({ params }: { params: Promise<{ id: st
   const draft = Number.isInteger(id) && id > 0 ? await getDraftById(id) : null;
   if (!draft) return <main className="app-shell"><BrandHeader signOut={<SignOutButton />} /><section className="detail-empty"><FileText size={34} /><h1>Onboarding not found.</h1><Link href="/leads" className="secondary-button">Return to submissions</Link></section></main>;
 
+  const clientPage = await getPageFor({ draftId: draft.id }).catch(() => null);
   const name = [draft.firstName, draft.lastName].filter(Boolean).join(" ") || "Name not entered yet";
   const stoppedAt = steps[Math.min(draft.step, steps.length - 1)];
 
@@ -28,6 +29,7 @@ export default async function DraftDetail({ params }: { params: Promise<{ id: st
     <BrandHeader signOut={<SignOutButton />} />
     <section className="business-detail-page">
       <Link href="/leads" className="detail-back"><ArrowLeft size={17} /> Back to submissions</Link>
+      {clientPage && <p className="client-page-link"><Link className="view-business-link" href={`/${clientPage.slug}`}>Open client page: /{clientPage.slug}</Link></p>}
       <div className="business-detail-hero">
         <div>
           <p className="eyebrow">{draft.completedAt ? "SUBMITTED ONBOARDING (SAVED DRAFT)" : "IN-PROGRESS ONBOARDING"}</p>

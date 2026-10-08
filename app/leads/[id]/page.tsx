@@ -6,7 +6,7 @@ import AccessPage from "@/components/AccessPage";
 import BrandHeader from "@/components/BrandHeader";
 import LocalDate from "@/components/LocalDate";
 import { SignOutButton } from "@/components/AuthButtons";
-import { getSubmissionById } from "@/lib/db";
+import { getPageFor, getSubmissionById } from "@/lib/db";
 import { OnboardingProfile, SupportProfile, displayValue } from "@/components/ProfileSections";
 
 export const metadata: Metadata = { title: "Business profile | BOOST", robots: { index: false, follow: false } };
@@ -21,6 +21,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
   const record = Number.isInteger(id) && id > 0 ? await getSubmissionById(id) : null;
   if (!record) return <main className="app-shell"><BrandHeader signOut={<SignOutButton />} /><section className="detail-empty"><FileText size={34}/><h1>Business profile not found.</h1><p>The requested submission may not exist or may no longer be available.</p><Link href="/leads" className="secondary-button">Return to submissions</Link></section></main>;
 
+  const clientPage = await getPageFor({ submissionId: record.id }).catch(() => null);
   const isOnboarding = record.submissionType === "onboarding";
   const customerName = `${record.firstName} ${record.lastName ?? ""}`.trim();
 
@@ -28,6 +29,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
     <BrandHeader signOut={<SignOutButton />} />
     <section className="business-detail-page">
       <Link href="/leads" className="detail-back"><ArrowLeft size={17}/> Back to submissions</Link>
+      {clientPage && <p className="client-page-link"><Link className="view-business-link" href={`/${clientPage.slug}`}>Open client page: /{clientPage.slug}</Link></p>}
       <div className="business-detail-hero">
         <div>
           <p className="eyebrow">{isOnboarding ? "CALL-READY BUSINESS PROFILE" : "CALL-READY SUPPORT PROFILE"}</p>

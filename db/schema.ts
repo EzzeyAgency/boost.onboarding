@@ -61,3 +61,21 @@ export const drafts = pgTable(
 );
 
 export type Draft = typeof drafts.$inferSelect;
+
+/** One shareable page per customer at /<business-name>. Points at their draft, then their submission once submitted. */
+export const clientPages = pgTable(
+  "client_pages",
+  {
+    id: serial("id").primaryKey(),
+    slug: varchar("slug", { length: 80 }).notNull().unique(),
+    email: varchar("email", { length: 320 }).notNull(),
+    companyName: varchar("company_name", { length: 255 }).notNull(),
+    draftId: integer("draft_id"),
+    submissionId: integer("submission_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  table => [index("client_page_draft_idx").on(table.draftId), index("client_page_submission_idx").on(table.submissionId)]
+);
+
+export type ClientPage = typeof clientPages.$inferSelect;

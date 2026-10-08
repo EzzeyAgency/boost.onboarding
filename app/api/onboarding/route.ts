@@ -1,10 +1,10 @@
-import { completeDraft, createSubmission } from "@/lib/db";
+import { completeDraft, createSubmission, ensureClientPage } from "@/lib/db";
 import { googleProfileLabel } from "@/lib/form";
 import { clientKey, rateLimited } from "@/lib/rate-limit";
 import { json, readJson } from "@/lib/respond";
 import { hashToken } from "@/lib/tokens";
 import { firstIssue, getFormStatus, getGoogleAccessStatus, onboardingInput } from "@/lib/validation";
-import { originOf, sendWebhook } from "@/lib/webhook";
+import { ONBOARDING_INFO, clientPageUrl, originOf, sendWebhook } from "@/lib/webhook";
 
 export async function POST(request: Request) {
   if (rateLimited(clientKey(request, "onboarding"))) {
@@ -50,7 +50,16 @@ export async function POST(request: Request) {
   }
 
   const token = typeof raw.draftToken === "string" && /^[A-Za-z0-9_-]{32,64}$/.test(raw.draftToken) ? raw.draftToken : null;
-  if (token) await completeDraft(hashToken(token), id).catch(error => console.error("draft completion failed", error instanceof Error ? error.name : "unknown"));
+  const draftId = token ? await completeDraft(hashToken(token), id).catch(error => { console.error("draft completion failed", error instanceof Error ? error.name : "unknown"); return null; }) : null;
+
+  // The customer's page switches from their draft to the submitted answers (or is created now if they never saved).
+  let pageUrl: string | null = null;
+  try {
+    const { page } = await ensureClientPage({ email: input.email, companyName: input.companyName, draftId, submissionId: id });
+    pageUrl = clientPageUrl(request, page.slug);
+  } catch (error) {
+    console.error("client page failed", error instanceof Error ? error.name : "unknown");
+  }
 
   await sendWebhook("onboarding.submitted", {
     submissionId: id,
@@ -66,6 +75,8 @@ export async function POST(request: Request) {
     needsHelp: googleAccessStatus === "support_needed",
     helpNote: helpNote || null,
     profileUrl: `${originOf(request)}/leads/${id}`,
+    status: "Submitted",
+    ...(pageUrl ? { [ONBOARDING_INFO]: pageUrl } : {}),
   });
 
   return json({ ok: true, formStatus, googleAccessStatus });

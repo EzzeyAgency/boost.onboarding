@@ -220,3 +220,20 @@ fieldset.form-field legend { padding:0; }
   .save-bar { flex-direction:column; align-items:stretch; }
   .save-later-button { justify-content:center; }
 }
+
+/* Client page: /<business-name> */
+.client-page .business-call-strip small { display:block; margin-top:.15rem; color:#667983; font-size:.78rem; font-weight:600; }
+.client-actions { display:flex; flex-wrap:wrap; gap:.6rem; margin:0 0 1.2rem; }
+.tone-chip { display:inline-block; padding:.32rem .6rem; border-radius:999px; font-size:.72rem; font-weight:850; line-height:1; }
+.tone-chip.good { background:#e1f6eb; color:#14734f; }
+.tone-chip.warn { background:#fff5de; color:#9c6511; }
+.tone-chip.bad { background:#ffe9e9; color:#ae3434; }
+.glance-title { margin:1.6rem 0 .8rem; font-size:1.15rem; letter-spacing:-.02em; color:#1d3742; }
+.glance-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; }
+.glance-card { min-width:0; padding:1rem 1.05rem; background:#fff; border:1px solid var(--line); border-left:4px solid var(--blue); border-radius:12px; }
+.glance-card.wide { grid-column:span 2; }
+.glance-card span { display:block; margin-bottom:.35rem; color:#5f7882; font-size:.68rem; font-weight:850; letter-spacing:.07em; text-transform:uppercase; }
+.glance-card p { margin:0; color:#1f343d; font-size:.98rem; font-weight:650; line-height:1.45; overflow-wrap:anywhere; white-space:pre-line; }
+@media (max-width:900px) { .glance-grid { grid-template-columns:1fr 1fr; } }
+@media (max-width:620px) { .glance-grid { grid-template-columns:1fr; } .glance-card.wide { grid-column:auto; } .client-actions .secondary-button { flex:1 1 100%; } }
+.client-page-link { margin:-.6rem 0 1.2rem; }

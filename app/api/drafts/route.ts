@@ -1,10 +1,13 @@
-import { getDraftByTokenHash, saveDraft } from "@/lib/db";
+import { ensureClientPage, getDraftByTokenHash, saveDraft } from "@/lib/db";
 import { googleProfileLabel } from "@/lib/form";
 import { clientKey, rateLimited } from "@/lib/rate-limit";
 import { json, readJson } from "@/lib/respond";
 import { hashToken, newToken } from "@/lib/tokens";
 import { draftInput, firstIssue, getGoogleAccessStatus } from "@/lib/validation";
-import { originOf, sendWebhook } from "@/lib/webhook";
+import { ONBOARDING_INFO, clientPageUrl, originOf, sendWebhook } from "@/lib/webhook";
+
+/** Index of the step after "Your details": the business name is final once the customer reaches it. */
+const DETAILS_DONE_STEP = 3;
 
 const text = (value: unknown, max: number) => (typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null);
 
@@ -33,15 +36,34 @@ export async function POST(request: Request) {
     if (!row) return json({ error: "This form was already submitted. Refresh the page to start a new one." }, 409);
 
     const resumeUrl = `${originOf(request)}/?resume=${token}`;
+    const companyName = text(data.companyName, 255);
+    const contact = {
+      email: parsed.data.email,
+      firstName: text(data.firstName, 120),
+      lastName: text(data.lastName, 120),
+      companyName,
+      googleProfile: googleProfileLabel(googleProfileStatus),
+    };
+
+    // The customer's page is created once the business name is final: after the "Your details" step, or on Save and finish later.
+    let pageUrl: string | null = null;
+    if (companyName && (step >= DETAILS_DONE_STEP || notify)) {
+      try {
+        const { page, created } = await ensureClientPage({ email: parsed.data.email, companyName, draftId: row.id });
+        pageUrl = clientPageUrl(request, page.slug);
+        if (created) await sendWebhook("onboarding.page_created", { ...contact, status: "In progress", [ONBOARDING_INFO]: pageUrl });
+      } catch (error) {
+        console.error("client page failed", error instanceof Error ? error.name : "unknown");
+      }
+    }
+
     if (notify) {
       await sendWebhook("onboarding.progress_saved", {
-        email: parsed.data.email,
-        firstName: text(data.firstName, 120),
-        lastName: text(data.lastName, 120),
-        companyName: text(data.companyName, 255),
-        googleProfile: googleProfileLabel(googleProfileStatus),
+        ...contact,
+        status: "In progress",
         resumeUrl,
         adminUrl: `${originOf(request)}/leads/drafts/${row.id}`,
+        ...(pageUrl ? { [ONBOARDING_INFO]: pageUrl } : {}),
       });
     }
     return json({ ok: true, token, resumeUrl, savedAt: row.updatedAt });

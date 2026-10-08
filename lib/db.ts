@@ -1,8 +1,9 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { and, desc, eq, gte, isNull, lt, type SQL } from "drizzle-orm";
-import { drafts, submissions, type NewSubmission } from "@/db/schema";
+import { and, desc, eq, gte, isNull, like, lt, or, type SQL } from "drizzle-orm";
+import { clientPages, drafts, submissions, type NewSubmission } from "@/db/schema";
+import { nextFreeSlug, slugify } from "@/lib/slug";
 
 let client: ReturnType<typeof drizzle> | undefined;
 
@@ -84,8 +85,14 @@ export async function getDraftByTokenHash(tokenHash: string) {
   return row ?? null;
 }
 
+/** Marks the draft submitted and returns its id, so its client page can switch to the submission. */
 export async function completeDraft(tokenHash: string, submissionId: number) {
-  await db().update(drafts).set({ completedAt: new Date(), submissionId }).where(and(eq(drafts.tokenHash, tokenHash), isNull(drafts.completedAt)));
+  const [row] = await db()
+    .update(drafts)
+    .set({ completedAt: new Date(), submissionId })
+    .where(and(eq(drafts.tokenHash, tokenHash), isNull(drafts.completedAt)))
+    .returning({ id: drafts.id });
+  return row?.id ?? null;
 }
 
 export async function listOpenDrafts() {
@@ -111,4 +118,44 @@ export async function listOpenDrafts() {
 export async function getDraftById(id: number) {
   const [row] = await db().select().from(drafts).where(eq(drafts.id, id)).limit(1);
   return row ?? null;
+}
+
+export async function getPageBySlug(slug: string) {
+  const [row] = await db().select().from(clientPages).where(eq(clientPages.slug, slug)).limit(1);
+  return row ?? null;
+}
+
+export async function getPageFor(ref: { draftId?: number | null; submissionId?: number | null }) {
+  const conditions: SQL[] = [];
+  if (ref.submissionId) conditions.push(eq(clientPages.submissionId, ref.submissionId));
+  if (ref.draftId) conditions.push(eq(clientPages.draftId, ref.draftId));
+  if (!conditions.length) return null;
+  const [row] = await db().select().from(clientPages).where(or(...conditions)).limit(1);
+  return row ?? null;
+}
+
+/**
+ * Returns the customer's page, creating it on first call. The slug comes from the business name,
+ * gets -2, -3... when taken, and never changes afterwards so links already shared stay valid.
+ */
+export async function ensureClientPage(input: { email: string; companyName: string; draftId?: number | null; submissionId?: number | null }) {
+  const existing = await getPageFor(input);
+  if (existing) {
+    if (input.submissionId && existing.submissionId !== input.submissionId) {
+      await db().update(clientPages).set({ submissionId: input.submissionId, email: input.email, updatedAt: new Date() }).where(eq(clientPages.id, existing.id));
+    }
+    return { page: existing, created: false };
+  }
+  const base = slugify(input.companyName);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const taken = await db().select({ slug: clientPages.slug }).from(clientPages).where(or(eq(clientPages.slug, base), like(clientPages.slug, `${base}-%`)));
+    const slug = nextFreeSlug(base, taken.map(row => row.slug));
+    const [page] = await db()
+      .insert(clientPages)
+      .values({ slug, email: input.email, companyName: input.companyName, draftId: input.draftId ?? null, submissionId: input.submissionId ?? null })
+      .onConflictDoNothing({ target: clientPages.slug })
+      .returning();
+    if (page) return { page, created: true };
+  }
+  throw new Error("could not allocate a client page slug");
 }
