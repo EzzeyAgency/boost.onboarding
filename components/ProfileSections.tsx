@@ -76,8 +76,8 @@ export function OnboardingProfile({ answers, googleAccessStatus }: { answers: An
       item("Primary outcome (earlier form)", answers.primaryOutcome),
       item("Wants more of", answers.growthFocus),
       item("Where they want more customers", answers.growthAreas),
-      item("Great first 90 days", answers.success90),
-      item("Great first year", answers.successYear),
+      item("Great first 90 days (earlier form)", answers.success90),
+      item("Great first year (earlier form)", answers.successYear),
       item("Most valuable customers or jobs", answers.highValueWork),
     ]} />
     <DetailSection title="Google Business Profile" caption="Read this before discussing visibility, reviews, or the next Google step." items={[

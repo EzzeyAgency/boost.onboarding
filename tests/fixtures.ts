@@ -15,8 +15,6 @@ export const baseOnboarding = {
   holdingBack: "Not enough reviews",
   differentiator: "Same-day service",
   exclusions: "None",
-  success90: "More calls",
-  successYear: "Steady bookings",
   highValueWork: "Water heater replacement",
   competitors: "Not sure",
   optionalKeywords: "plumber near me",

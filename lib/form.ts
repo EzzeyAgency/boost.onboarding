@@ -101,7 +101,7 @@ export const steps = [
   { id: "connect", part: 1, label: "Connect Google" },
   { id: "contact", part: 1, label: "Your details" },
   { id: "business", part: 2, label: "Your business" },
-  { id: "goals", part: 2, label: "Your goals" },
+  { id: "goals", part: 2, label: "Customers and competitors" },
   { id: "leads", part: 2, label: "Leads and follow-up" },
   { id: "updates", part: 2, label: "Updates" },
   { id: "review", part: 2, label: "Review and submit" },
@@ -114,7 +114,7 @@ export const STEP_FIELDS: Record<number, readonly string[]> = {
   1: ["googleAccessCompletion", "googleAccessHelp", "serviceMode", "businessAddress", "businessPhone", "businessHours", "googleAuthority", "setupStatus", "setupHelp", "recoveryContactName", "recoveryContactEmail", "recoveryIssue", "recoveryIssueOther", "recoveryHelp", "statusCheckHelp"],
   2: ["firstName", "lastName", "email", "companyName", "businessRole", "businessCity", "businessState"],
   3: ["websiteStatus", "website", "businessDescription", "growthFocus", "growthAreas", "preferredContact", "preferredContactOther", "holdingBack", "differentiator", "exclusions"],
-  4: ["success90", "successYear", "highValueWork", "competitors", "optionalKeywords"],
+  4: ["highValueWork", "competitors", "optionalKeywords"],
   5: ["responseOwner", "callTracking", "outcomesTracking", "formDestination", "leadChallenges"],
   6: ["reportRecipients", "communicationPreference", "communicationOther", "mobileNumber", "smsConsent", "notes"],
 };

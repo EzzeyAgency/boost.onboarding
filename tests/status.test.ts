@@ -67,7 +67,7 @@ describe("required fields and conditional rules", () => {
     expect(issues({ ...ok, websiteStatus: "no", website: "" })).toEqual([]);
   });
   it("makes previously optional business questions required", () => {
-    for (const field of ["businessRole", "differentiator", "exclusions", "successYear", "competitors", "optionalKeywords", "formDestination", "leadChallenges", "holdingBack"]) {
+    for (const field of ["businessRole", "differentiator", "exclusions", "competitors", "optionalKeywords", "formDestination", "leadChallenges", "holdingBack"]) {
       expect(issues({ ...ok, [field]: "" })).toContain(field);
     }
   });

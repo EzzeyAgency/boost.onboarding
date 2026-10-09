@@ -48,7 +48,7 @@ const initialState: FormState = {
   firstName: "", lastName: "", email: "", companyName: "", businessRole: "", businessCity: "", businessState: "",
   websiteStatus: "", website: "", businessDescription: "", growthFocus: "", growthAreas: "",
   preferredContact: "", preferredContactOther: "", holdingBack: "", differentiator: "", exclusions: "",
-  success90: "", successYear: "", highValueWork: "", competitors: "", optionalKeywords: "",
+  highValueWork: "", competitors: "", optionalKeywords: "",
   responseOwner: "", callTracking: "", outcomesTracking: "", formDestination: "", leadChallenges: "",
   reportRecipients: "", communicationPreference: "", communicationOther: "", mobileNumber: "", smsConsent: false, notes: "",
   companyWebsite: "",
@@ -517,9 +517,7 @@ function BusinessStep({ form, setValue }: StepProps) {
 
 function GoalsStep({ form, setValue }: StepProps) {
   return <div className="step-content">
-    <StepIntro title="What does success look like?">Your goals tell us what to focus on and what to show you in your reports.</StepIntro>
-    <Field label="What would a great first 90 days look like?" required><Area value={form.success90} onChange={value => setValue("success90", value)} /></Field>
-    <Field label="What would a great first year look like?" required><Area value={form.successYear} onChange={value => setValue("successYear", value)} /></Field>
+    <StepIntro title="Your customers and competitors">This helps us focus on the work that matters most to your business.</StepIntro>
     <Field label="Which customers or jobs are most valuable to you?" required><Area value={form.highValueWork} onChange={value => setValue("highValueWork", value)} /></Field>
     <Field label="Who are your main competitors?" hint="Names, websites, or locations. Write &quot;Not sure&quot; if you don't know." required><Area rows={2} value={form.competitors} onChange={value => setValue("competitors", value)} /></Field>
     <Field label="What words do customers use when they look for a business like yours?" hint="We do the research, but your view helps. Write &quot;Not sure&quot; if nothing comes to mind." required><Area rows={2} value={form.optionalKeywords} onChange={value => setValue("optionalKeywords", value)} /></Field>
@@ -561,7 +559,7 @@ function ReviewStep({ form }: { form: FormState }) {
       <div><span>Business</span><b>{String(form.companyName || "Not provided")}</b><p>{String(form.businessDescription || "")}</p></div>
       <div><span>Google Business Profile</span><b className="no-cap">{googleProfileLabel(form.googleProfileState) || "Not provided"}</b><p>{connected ? "Connected securely. Thank you." : "We'll follow up on the next Google step with you."}</p></div>
       <div><span>Want more of</span><b className="no-cap">{String(form.growthFocus || "Not provided")}</b><p>{String(form.growthAreas || "")}</p></div>
-      <div><span>How customers should reach you</span><b className="no-cap">{String(contact || "Not provided")}</b><p>{String(form.success90 || "")}</p></div>
+      <div><span>How customers should reach you</span><b className="no-cap">{String(contact || "Not provided")}</b></div>
     </div>
     <div className={connected ? "ready-banner ready" : "ready-banner"}>
       {connected

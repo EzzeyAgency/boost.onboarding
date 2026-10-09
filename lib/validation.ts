@@ -64,9 +64,7 @@ const onboardingBase = z.object({
     differentiator: requiredText(6000, "Please tell us what makes your business different."),
     exclusions: requiredText(3000, "Please tell us what you don't want more of, or write \"None\"."),
 
-    // Part 2: Goals
-    success90: requiredText(6000, "Please tell us what a great first 90 days would look like."),
-    successYear: requiredText(6000, "Please tell us what a great first year would look like."),
+    // Part 2: Customers and competitors
     highValueWork: requiredText(6000, "Please tell us which customers or jobs are most valuable to you."),
     competitors: requiredText(6000, "Please list a few competitors, or write \"Not sure\"."),
     optionalKeywords: requiredText(6000, "Please share the words customers use to find you, or write \"Not sure\"."),

@@ -88,7 +88,6 @@ export default function ClientPageView({ page, submission, draft, pageUrl, signe
         <Glance label="What they do" value={str(answers.businessDescription)} wide />
         <Glance label="Where" value={str(answers.growthAreas)} />
         <Glance label="What's holding them back" value={str(answers.holdingBack)} wide />
-        <Glance label="A great first 90 days" value={str(answers.success90)} />
         <Glance label="Most valuable customers or jobs" value={str(answers.highValueWork)} />
         <Glance label="What makes them different" value={str(answers.differentiator)} />
         <Glance label="Updates go to" value={updates} />
