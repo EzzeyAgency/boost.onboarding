@@ -1,7 +1,7 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { and, desc, eq, gte, isNull, like, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, like, lt, or, sql, type SQL } from "drizzle-orm";
 import { clientPages, drafts, submissions, type NewSubmission } from "@/db/schema";
 import { clientSlug } from "@/lib/slug";
 
@@ -138,13 +138,36 @@ export async function getPageFor(ref: { draftId?: number | null; submissionId?: 
  * Returns the customer's page, creating it on first call. The slug is the business name plus city and state,
  * gets -1, -2... when an exact repeat, and never changes afterwards so links already shared stay valid.
  */
+/**
+ * An unsubmitted page this same customer already has for this business (same email, same name, city and state).
+ * Lets a restarted form, a second browser or a submit without a saved draft reuse the link already shared,
+ * instead of leaving that link stuck on "in progress" and making a new -1 page.
+ */
+async function getOpenPageForClient(input: { email: string; companyName: string; city?: string | null; state?: string | null }) {
+  const base = clientSlug(input.companyName, input.city, input.state, []);
+  const [row] = await db()
+    .select()
+    .from(clientPages)
+    .where(and(
+      eq(sql`lower(${clientPages.email})`, input.email.trim().toLowerCase()),
+      isNull(clientPages.submissionId),
+      or(eq(clientPages.slug, base), sql`${clientPages.slug} ~ ${`^${base}-[0-9]+$`}`),
+    ))
+    .orderBy(desc(clientPages.updatedAt))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function ensureClientPage(input: { email: string; companyName: string; city?: string | null; state?: string | null; draftId?: number | null; submissionId?: number | null }) {
-  const existing = await getPageFor(input);
+  const existing = (await getPageFor(input)) ?? (await getOpenPageForClient(input));
   if (existing) {
-    if (input.submissionId && existing.submissionId !== input.submissionId) {
-      await db().update(clientPages).set({ submissionId: input.submissionId, email: input.email, updatedAt: new Date() }).where(eq(clientPages.id, existing.id));
+    const changes: Partial<typeof clientPages.$inferInsert> = {};
+    if (input.submissionId && existing.submissionId !== input.submissionId) changes.submissionId = input.submissionId;
+    if (input.draftId && existing.draftId !== input.draftId && !existing.submissionId) changes.draftId = input.draftId;
+    if (Object.keys(changes).length) {
+      await db().update(clientPages).set({ ...changes, email: input.email, updatedAt: new Date() }).where(eq(clientPages.id, existing.id));
     }
-    return { page: existing, created: false };
+    return { page: { ...existing, ...changes }, created: false };
   }
   const base = clientSlug(input.companyName, input.city, input.state, []);
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -158,4 +181,16 @@ export async function ensureClientPage(input: { email: string; companyName: stri
     if (page) return { page, created: true };
   }
   throw new Error("could not allocate a client page slug");
+}
+
+/** Closes this customer's other unfinished drafts for the same business once they submit, so they leave the in-progress list. */
+export async function completeOtherDrafts(email: string, companyName: string, submissionId: number) {
+  await db()
+    .update(drafts)
+    .set({ completedAt: new Date(), submissionId })
+    .where(and(
+      eq(sql`lower(${drafts.email})`, email.trim().toLowerCase()),
+      eq(sql`lower(${drafts.companyName})`, companyName.trim().toLowerCase()),
+      isNull(drafts.completedAt),
+    ));
 }

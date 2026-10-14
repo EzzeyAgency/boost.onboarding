@@ -1,4 +1,4 @@
-import { completeDraft, createSubmission, ensureClientPage } from "@/lib/db";
+import { completeDraft, completeOtherDrafts, createSubmission, ensureClientPage } from "@/lib/db";
 import { googleProfileLabel } from "@/lib/form";
 import { clientKey, rateLimited } from "@/lib/rate-limit";
 import { json, readJson } from "@/lib/respond";
@@ -51,6 +51,8 @@ export async function POST(request: Request) {
 
   const token = typeof raw.draftToken === "string" && /^[A-Za-z0-9_-]{32,64}$/.test(raw.draftToken) ? raw.draftToken : null;
   const draftId = token ? await completeDraft(hashToken(token), id).catch(error => { console.error("draft completion failed", error instanceof Error ? error.name : "unknown"); return null; }) : null;
+
+  await completeOtherDrafts(input.email, input.companyName, id).catch(error => console.error("draft cleanup failed", error instanceof Error ? error.name : "unknown"));
 
   // The customer's page switches from their draft to the submitted answers (or is created now if they never saved).
   let pageUrl: string | null = null;

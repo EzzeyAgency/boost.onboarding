@@ -12,6 +12,7 @@ const db = {
   saveDraft: vi.fn(async () => ({ id: 7, createdAt: new Date(), updatedAt: new Date() }) as { id: number; createdAt: Date; updatedAt: Date } | null),
   getDraftByTokenHash: vi.fn(async () => ({ data: { firstName: "Jane" }, step: 3, email: "jane@example.com" }) as unknown),
   completeDraft: vi.fn(async () => 7 as number | null),
+  completeOtherDrafts: vi.fn(async () => undefined),
   ensureClientPage: vi.fn(async () => ({ page: { slug: "smith-plumbing" }, created: true })),
   listOpenDrafts: vi.fn(async () => []),
 };
@@ -156,6 +157,10 @@ describe("save progress and resume", () => {
   it("marks the draft complete when the onboarding is submitted", async () => {
     await onboardingRoute(post({ ...baseOnboarding, googleProfileState: "not_sure", statusCheckHelp: "I need help", draftToken: "c".repeat(43) }));
     expect(db.completeDraft).toHaveBeenCalledWith(hashToken("c".repeat(43)), 1);
+  });
+  it("closes the customer's other unfinished drafts for the same business on submit", async () => {
+    await onboardingRoute(post({ ...baseOnboarding, googleProfileState: "not_sure", statusCheckHelp: "I need help" }));
+    expect(db.completeOtherDrafts).toHaveBeenCalledWith(baseOnboarding.email, baseOnboarding.companyName, 1);
   });
   it("keeps the in-progress list admin only", async () => {
     expect((await listDraftsRoute()).status).toBe(404);
