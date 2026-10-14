@@ -304,7 +304,7 @@ export default function OnboardingForm() {
             <span>Step {step + 1} of {steps.length}</span>
           </div>
 
-          <label className="honeypot" aria-hidden="true">Company website<input tabIndex={-1} autoComplete="off" value={String(form.companyWebsite)} onChange={event => setValue("companyWebsite", event.target.value)} /></label>
+          <label className="honeypot" aria-hidden="true">Company website<input aria-hidden="true" tabIndex={-1} autoComplete="off" value={String(form.companyWebsite)} onChange={event => setValue("companyWebsite", event.target.value)} /></label>
 
           {step === 0 && <GoogleStep {...props} />}
           {step === 1 && <ConnectStep {...props} />}

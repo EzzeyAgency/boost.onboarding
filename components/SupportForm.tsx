@@ -62,7 +62,7 @@ export default function SupportForm() {
       {submitted
         ? <div className="support-success"><div className="success-icon"><Check size={30} /></div><h2>We've got your request.</h2><p>Thank you{form.firstName ? `, ${form.firstName}` : ""}. Our team has received your message and will contact you at {form.email}.</p>{fromOnboarding && <p className="support-back">You can close this tab and go back to your onboarding.</p>}</div>
         : <form className="support-form" onSubmit={submit} noValidate>
-          <label className="honeypot" aria-hidden="true">Company website<input tabIndex={-1} autoComplete="off" value={form.companyWebsite} onChange={e => set("companyWebsite", e.target.value)} /></label>
+          <label className="honeypot" aria-hidden="true">Company website<input aria-hidden="true" tabIndex={-1} autoComplete="off" value={form.companyWebsite} onChange={e => set("companyWebsite", e.target.value)} /></label>
           <div className="form-canvas-header"><p className="eyebrow">SUPPORT REQUEST</p><span>Takes about 2 minutes</span></div>
           <div className="two-column">
             <label className="form-field"><span className="field-label">First name <b>*</b></span><input autoComplete="given-name" value={form.firstName} onChange={e => set("firstName", e.target.value)} /></label>
